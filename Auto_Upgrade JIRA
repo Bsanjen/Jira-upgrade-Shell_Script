@@ -1,0 +1,55 @@
+#!/bin/bash
+
+# Variables
+JIRA_SERVICE_NAME="jira"                # The name of the Jira service
+JIRA_INSTALL_DIR="/opt/atlassian/jira"  # Jira installation directory
+JIRA_HOME_DIR="/var/atlassian/application-data/jira"  # Jira home directory
+BACKUP_DIR="/path/to/backup"            # Directory to store backups
+DOWNLOAD_URL="https://www.atlassian.com/software/jira/downloads/binary/atlassian-jira-software-X.Y.Z-x64.bin"  # URL to download the latest Jira version
+INSTALLER="/tmp/atlassian-jira-software.bin"  # Temporary path for the downloaded installer
+
+# Function to check command execution status
+check_status() {
+    if [ $? -ne 0 ]; then
+        echo "Error occurred during $1. Exiting."
+        exit 1
+    fi
+}
+
+# Step 1: Stop Jira service
+echo "Stopping Jira service..."
+sudo systemctl stop $JIRA_SERVICE_NAME
+check_status "stopping Jira service"
+
+# Step 2: Backup Jira installation and home directories
+echo "Backing up Jira directories..."
+mkdir -p "$BACKUP_DIR"
+tar -czf "$BACKUP_DIR/jira_install_backup_$(date +%F).tar.gz" "$JIRA_INSTALL_DIR"
+check_status "backing up Jira installation directory"
+tar -czf "$BACKUP_DIR/jira_home_backup_$(date +%F).tar.gz" "$JIRA_HOME_DIR"
+check_status "backing up Jira home directory"
+
+# Step 3: Download the latest Jira version
+echo "Downloading the latest Jira version..."
+wget -O "$INSTALLER" "$DOWNLOAD_URL"
+check_status "downloading Jira installer"
+
+# Step 4: Set executable permission on the installer
+chmod +x "$INSTALLER"
+check_status "setting executable permission on the installer"
+
+# Step 5: Run the installer
+echo "Running the Jira installer..."
+sudo "$INSTALLER" -q -varfile response.varfile
+check_status "running Jira installer"
+
+# Step 6: Clean up the installer
+rm -f "$INSTALLER"
+check_status "cleaning up the installer"
+
+# Step 7: Restart Jira service
+echo "Starting Jira service..."
+sudo systemctl start $JIRA_SERVICE_NAME
+check_status "starting Jira service"
+
+echo "Jira upgrade completed successfully."
